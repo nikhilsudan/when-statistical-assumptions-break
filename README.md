@@ -8,17 +8,13 @@
 
 This project is a **simulation-based statistical investigation** into how classical statistical inference behaves when the assumption of normality is violated.
 
-Instead of training machine learning models on real data, the study constructs **controlled probabilistic experiments** where:
+Instead of applying machine learning to real datasets, the study constructs **controlled probabilistic experiments** where the true distribution and true mean are known in advance. This allows us to objectively test whether standard statistical tools are correct, reliable, and meaningful.
 
-- The true population distribution is known.  
-- The true mean is known in advance.  
-- Every statistical claim can be verified objectively.  
-
-Four data-generating processes are compared:
+We compare four data-generating processes:
 
 - **Normal data** — the textbook benchmark  
 - **Lognormal data** — strongly skewed data  
-- **Student-t data** — heavy-tailed data with frequent outliers  
+- **Student-t data (ν = 4)** — heavy-tailed data with frequent outliers  
 - **Gaussian Mixture data** — two hidden subpopulations  
 
 Across these settings, the project evaluates:
@@ -71,29 +67,58 @@ Experiments are conducted at five sample sizes:
 
 ---
 
-### Classical Confidence Interval (written in readable math style)
+### Sample Mean (Estimation)
 
-For every distribution and sample size, we compute the standard 95% confidence interval for the mean:
+For every sample we compute the **sample mean**:
 
-> **sample mean ± 1.96 × (sample standard deviation ÷ √n)**
+> **X̄ = (X₁ + X₂ + … + Xₙ) ÷ n**
 
-In words:
+In words: add all observations and divide by sample size.
 
-- Take the average of your sample.  
-- Estimate uncertainty using the sample standard deviation divided by the square root of sample size.  
-- Multiply by 1.96 to obtain a 95% range.  
-
-This is repeated **1,000 times per scenario** to measure how often the interval actually contains the true mean.
+This is the basic estimator whose behavior we study throughout the project.
 
 ---
 
-### Hypothesis Testing
+### Classical 95% Confidence Interval (Core Formula)
 
-We run a standard one-sample t-test under a **true null hypothesis** (so the correct decision is “do not reject”).
+For every distribution and sample size, we compute the standard 95% confidence interval for the mean:
 
-If the test is well calibrated, it should falsely reject the truth **about 5% of the time**.
+> **X̄ ± 1.96 · (S ÷ √n)**
 
-We measure the actual false rejection rate empirically and compare it to 5%.
+Where:
+
+- **X̄** = sample mean  
+- **S** = sample standard deviation  
+- **√n** = square root of sample size  
+- **1.96** = 95% critical value from the normal distribution  
+
+This is the exact textbook formula used in introductory and intermediate statistics.
+
+We repeat this procedure **1,000 times per scenario** to estimate empirical coverage.
+
+---
+
+### Empirical Coverage (How often CIs are correct)
+
+For each setting we compute:
+
+> **Coverage = (number of intervals that contain the true mean) ÷ 1000**
+
+If the method works correctly, this should be close to **0.95** (95%).
+
+This is the main metric behind the confidence-interval plots.
+
+---
+
+### Hypothesis Testing (t-test)
+
+We run a standard one-sample t-test under a **true null hypothesis**.
+
+We measure the **Type I error rate**:
+
+> **Type I error = (number of false rejections) ÷ 1000**
+
+If the test is well calibrated, this should be close to **0.05** (5%).
 
 ---
 
@@ -112,17 +137,24 @@ For each distribution, two side-by-side plots were created:
 To create the right-hand plot, we:
 
 1. Drew 5,000 independent samples of size 200  
-2. Computed the mean of each sample  
-3. Plotted the histogram of those 5,000 means  
+2. Computed X̄ for each sample  
+3. Plotted the histogram of those 5,000 sample means  
 
-This directly tests how well the **Central Limit Theorem** works in realistic settings.
+This directly tests how well the Central Limit Theorem works in practice.
 
 **What was observed**
 
-- **Normal data:** both population and sampling distribution are bell-shaped — classical theory works perfectly.  
-- **Lognormal data:** averaging reduces skew but does not fully fix it at n = 200 — explaining later CI failures.  
-- **Student-t data:** heavy tails persist even in the sampling distribution — standard errors become unstable.  
-- **Mixture data:** the sampling distribution looks normal, but the underlying data come from two distinct groups — the mean is statistically stable but conceptually misleading.
+- **Normal data:**  
+  Population and sampling distribution are both bell-shaped — classical theory works perfectly.
+
+- **Lognormal (skewed) data:**  
+  Averaging reduces skew but does not eliminate it at n = 200 — explaining later CI failures.
+
+- **Student-t (heavy-tailed) data:**  
+  Extreme values persist even in the sampling distribution — making standard errors unstable.
+
+- **Mixture data:**  
+  The sampling distribution of X̄ looks roughly normal, but the underlying data actually come from two distinct groups — the mean is statistically stable but conceptually misleading.
 
 **What this proves**
 
@@ -139,7 +171,9 @@ This figure has two parts.
 
 For each distribution and sample size, we measured:
 
-> In what fraction of 1,000 simulations did the 95% confidence interval actually contain the true mean?
+> In what fraction of 1,000 simulations did  
+> **X̄ ± 1.96 · (S ÷ √n)**  
+> actually contain the true mean?
 
 Findings:
 
@@ -148,9 +182,9 @@ Findings:
 
 **Bottom panel — precision of uncertainty**
 
-Here we measured how wide the confidence intervals were.
+Here we measured how wide the intervals were.
 
-- All intervals became narrower as sample size increased.  
+- All intervals became narrower as n increased.  
 - However, narrower intervals were not necessarily more correct.
 
 **Core insight**
@@ -162,7 +196,9 @@ Here we measured how wide the confidence intervals were.
 ### 3) Reliability of the t-Test  
 ![ttest_miscalibration](outputs/ttest_miscalibration.png)
 
-We measured how often the t-test incorrectly rejected a true null hypothesis.
+We measured how often the t-test incorrectly rejected a true null hypothesis:
+
+> **Type I error = false rejections ÷ 1000**
 
 If the test is reliable, this should be close to **5%**.
 
@@ -180,32 +216,39 @@ This demonstrates that classical hypothesis testing can systematically mislead a
 
 This is the capstone figure of the project.
 
-**Panel A — Fix for skewed data**
+#### Panel A — Fix for skewed data (Lognormal case)
 
 We compared:
 
-- Original confidence interval  
-- Confidence interval after applying a log transformation  
+- Original interval: **X̄ ± 1.96 · (S ÷ √n)**  
+- New interval computed in log-space and transformed back  
 
 Result:  
 The transformed interval achieved coverage much closer to 95%, proving that a principled statistical adjustment can repair inference.
 
-**Panel B — Fix for heavy-tailed data**
+---
 
-We compared three approaches:
+#### Panel B — Fix for heavy-tailed data (Student-t case)
 
-- Mean-based confidence intervals  
-- Median-based bootstrap intervals  
-- Trimmed-mean intervals  
+We compared three center estimators:
 
-Robust methods consistently outperformed the classical mean in the presence of outliers.
+- **Mean** → X̄  
+- **Median** → middle value of the data  
+- **Trimmed mean** → average after removing extreme values  
 
-**Panel C — Fix for mixture data**
+We built confidence intervals around each and compared their coverage.
+
+Result:  
+Robust methods (median and trimmed mean) consistently outperformed the classical mean when outliers were present.
+
+---
+
+#### Panel C — Fix for mixture data (GMM)
 
 Instead of summarizing the data with one misleading global mean, we applied a **Gaussian Mixture Model (GMM)** to automatically detect two clusters.
 
 Result:  
-The model identifies two distinct group means, giving a far more meaningful statistical summary.
+The model identifies two distinct group means, providing a far more meaningful statistical summary than a single average.
 
 ---
 
@@ -215,7 +258,7 @@ The model identifies two distinct group means, giving a far more meaningful stat
 2. Larger sample sizes reduce randomness but do not fix invalid assumptions.  
 3. Robust statistical methods outperform naive approaches when outliers are present.  
 4. Machine learning techniques can improve statistical interpretation in heterogeneous data.  
-5. Strong data science requires both diagnosis of problems **and** principled remediation.
+5. Strong data science requires both diagnosis of problems and principled remediation.
 
 ---
 
